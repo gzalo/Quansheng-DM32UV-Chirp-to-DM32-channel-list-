@@ -7,7 +7,6 @@ output_file = "CHIRP_to_DM32UV_fixed.csv"
 # Default values for DM32UV fields
 default_values = {
     "Power": "High",
-    "Band Width": "12.5KHz",
     "Scan List": "None",
     "TX Admit": "Allow TX",
     "Emergency System": "None",
@@ -80,10 +79,17 @@ with open(input_file, newline='', encoding='utf-8') as infile:
 
         ctcss_decode = row.get("rToneFreq", "None") or "None"
 
+        mode = row.get("Mode", "").lower()
+
+        if mode == "am" or mode == "nam":
+            print(f"Skipped: {row['Name']} (AM/NAM)")
+            continue
+
         new_row = {
             "No.": i + 1,
             "Channel Name": row["Name"],
-            "Channel Type": "Anlaog" if row.get("Mode", "").lower() in ["fm", "nfm"] else "Digital",
+            "Channel Type": "Anlaog",
+            "Band Width": "12.5KHz" if mode == "nfm" else "25KHz",
             "RX Frequency[MHz]": str(rx),
             "TX Frequency[MHz]": str(tx),
             "CTC/DCS Encode": "None",          # Force Encode to None
