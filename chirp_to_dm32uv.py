@@ -126,6 +126,9 @@ with open(input_file, newline="", encoding="utf-8") as infile:
             ctcss_decode = "None"
 
         mode = row.get("Mode", "").lower()
+        power = row.get("Power", "High")
+        if power == "Med":
+            power = "Middle"
 
         if mode == "am" or mode == "nam":
             print(f"Skipped: {row['Name']} (AM/NAM)")
@@ -140,6 +143,7 @@ with open(input_file, newline="", encoding="utf-8") as infile:
             "TX Frequency[MHz]": str(tx),
             "CTC/DCS Encode": ctcss_encode,
             "CTC/DCS Decode": ctcss_decode,
+            "Power": power,
         }
 
         new_row.update(default_values)
