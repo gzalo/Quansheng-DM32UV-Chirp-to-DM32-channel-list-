@@ -37,30 +37,61 @@ default_values = {
     "Signaling Type": "None",
     "PTT ID": "OFF",
     "VOX Function": "0",
-    "PTT ID Display": "0"
+    "PTT ID Display": "0",
 }
 
 # Output column order for DM32UV
 column_order = [
-    "No.", "Channel Name", "Channel Type", "RX Frequency[MHz]", "TX Frequency[MHz]",
-    "Power", "Band Width", "Scan List", "TX Admit", "Emergency System", "Squelch Level",
-    "APRS Report Type", "Forbid TX", "APRS Receive", "Forbid Talkaround", "Auto Scan",
-    "Lone Work", "Emergency Indicator", "Emergency ACK", "Analog APRS PTT Mode",
-    "Digital APRS PTT Mode", "TX Contact", "RX Group List", "Color Code", "Time Slot",
-    "Encryption", "Encryption ID", "APRS Report Channel", "Direct Dual Mode",
-    "Private Confirm", "Short Data Confirm", "DMR ID", "CTC/DCS Encode", "CTC/DCS Decode",
-    "Scramble", "RX Squelch Mode", "Signaling Type", "PTT ID", "VOX Function",
-    "PTT ID Display"
+    "No.",
+    "Channel Name",
+    "Channel Type",
+    "RX Frequency[MHz]",
+    "TX Frequency[MHz]",
+    "Power",
+    "Band Width",
+    "Scan List",
+    "TX Admit",
+    "Emergency System",
+    "Squelch Level",
+    "APRS Report Type",
+    "Forbid TX",
+    "APRS Receive",
+    "Forbid Talkaround",
+    "Auto Scan",
+    "Lone Work",
+    "Emergency Indicator",
+    "Emergency ACK",
+    "Analog APRS PTT Mode",
+    "Digital APRS PTT Mode",
+    "TX Contact",
+    "RX Group List",
+    "Color Code",
+    "Time Slot",
+    "Encryption",
+    "Encryption ID",
+    "APRS Report Channel",
+    "Direct Dual Mode",
+    "Private Confirm",
+    "Short Data Confirm",
+    "DMR ID",
+    "CTC/DCS Encode",
+    "CTC/DCS Decode",
+    "Scramble",
+    "RX Squelch Mode",
+    "Signaling Type",
+    "PTT ID",
+    "VOX Function",
+    "PTT ID Display",
 ]
 
 # Read CHIRP CSV and process rows
-with open(input_file, newline='', encoding='utf-8') as infile:
+with open(input_file, newline="", encoding="utf-8") as infile:
     reader = csv.DictReader(infile)
     output_rows = []
 
     for i, row in enumerate(reader):
         if not row.get("Name") or not row.get("Frequency"):
-            print(f"Skipping incomplete row {i+1}")
+            print(f"Skipping incomplete row {i + 1}")
             continue
 
         try:
@@ -74,10 +105,25 @@ with open(input_file, newline='', encoding='utf-8') as infile:
             else:
                 tx = rx
         except Exception as e:
-            print(f"Skipping row {i+1} due to error: {e}")
+            print(f"Skipping row {i + 1} due to error: {e}")
             continue
 
-        ctcss_decode = row.get("rToneFreq", "None") or "None"
+        tone_mode = row.get("Tone", "None") or "None"
+        rx_tone = row.get("rToneFreq", "None") or "None"
+
+        if tone_mode == "Tone":
+            ctcss_encode = rx_tone
+            ctcss_decode = "None"
+        elif tone_mode == "TSQL":
+            ctcss_encode = rx_tone
+            ctcss_decode = rx_tone
+        elif tone_mode == "DTCS":
+            polarity = "N" if row.get("DtcsPolarity", "None") == "RR" else "I"
+            ctcss_encode = "D" + row.get("DtcsCode", "None") + polarity
+            ctcss_decode = "D" + row.get("DtcsCode", "None") + polarity
+        else:
+            ctcss_encode = "None"
+            ctcss_decode = "None"
 
         mode = row.get("Mode", "").lower()
 
@@ -88,12 +134,12 @@ with open(input_file, newline='', encoding='utf-8') as infile:
         new_row = {
             "No.": i + 1,
             "Channel Name": row["Name"],
-            "Channel Type": "Anlaog",
+            "Channel Type": "Analog",
             "Band Width": "12.5KHz" if mode == "nfm" else "25KHz",
             "RX Frequency[MHz]": str(rx),
             "TX Frequency[MHz]": str(tx),
-            "CTC/DCS Encode": "None",          # Force Encode to None
-            "CTC/DCS Decode": ctcss_decode     # Use rToneFreq from CHIRP
+            "CTC/DCS Encode": ctcss_encode,
+            "CTC/DCS Decode": ctcss_decode,
         }
 
         new_row.update(default_values)
@@ -102,7 +148,7 @@ with open(input_file, newline='', encoding='utf-8') as infile:
         print(f"Processed: {new_row['Channel Name']} ({rx} MHz)")
 
 # Write output file
-with open(output_file, mode='w', newline='', encoding='utf-8') as outfile:
+with open(output_file, mode="w", newline="", encoding="utf-8") as outfile:
     writer = csv.DictWriter(outfile, fieldnames=column_order)
     writer.writeheader()
     writer.writerows(output_rows)
